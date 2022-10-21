@@ -3,13 +3,18 @@
   hosts: "{{ variable_host | default('localhost') }}"
   become_user: '{{ name_of_user }}'
   become_method: 'sudo'
+
   vars:
-   home_directory_of_user: "/home/{{ name_of_user }}"
-   conky_configuration_file: "/etc/conky/conky.conf"
-   list_soft: 
+    path_to_mout_cd: /media/cdrom0
+    list_soft:
      - build-essential
      - dkms
-     - linux-headers-"{{ ansible_facts.ansible_kernel }}"
+     - linux-headers-{{ ansible_kernel }}
+    list_repository:
+     - deb https://fasttrack.debian.net/debian-fasttrack/ bullseye-fasttrack main contrib
+     - deb https://fasttrack.debian.net/debian-fasttrack/ bullseye-backports-staging main contrib
+     - deb http://fasttrack.debian.net/debian-fasttrack/ bullseye-fasttrack main contrib
+     - deb http://fasttrack.debian.net/debian-fasttrack/ bullseye-backports-staging main contrib
 
   vars_prompt:
     - name: name_of_user
@@ -18,11 +23,48 @@
       default: mabp     
 
   tasks:
+    - name: Remove CD-Rom Repository
+      ansible.builtin.replace:
+        path: /etc/apt/sources.list
+        regexp: '.*cdrom:\[Debian.*'
+        replace: '#\1'
+      become: yes
+
+    - name: Add key for Fasstrack repository
+      ansible.builtin.apt:
+        pkg: fasttrack-archive-keyring
+        state: present
+      become: yes
+
+
+    - name: Add FastTrack repository to APT
+      ansible.builtin.apt_repository:
+        repo: "{{ item }}"
+        state: present
+      become: yes
+      with_list: "{{ list_repository }}"
+
     - name: Install the necessary packages
       apt:
-        cache_valid_time: 28800
+#        cache_valid_time: 28800
         update_cache: yes
         pkg: '{{ list_soft }}'
         state: present
       become: yes
+
+    - name: Try to mount CD-ROM (in VBox you must click Device->Insert Guest Additional)
+      ansible.posix.mount:
+        path: "{{ path_to_mout_cd }}"
+        src: /dev/sr0
+        fstype: iso9660
+        opts: ro,noauto
+        state: remounted
+
+
+    - name: Copy script to Temp direcory and set +x on script
+      ansible.builtin.copy:
+        src: "{{ path_to_mout_cd }}/VBoxLinuxAdditions.run"
+        dest: "/tmp/VBoxLinuxAdditions.run"
+        mode: u+rwx,g+rwx,o+rwx
+        remote_src: yes
   
