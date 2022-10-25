@@ -1,0 +1,56 @@
+---
+- name: '!!! x86_64 Arch only !!!  Ansible script for Debian 11+, to setup Yandex Browser (probably beta version), and configure it.'
+  hosts: "{{ variable_host | default('localhost') }}"
+  become_user: '{{ name_of_user }}'
+  become_method: 'sudo'
+
+  vars:
+    list_soft:
+     - yandex-browser-stable
+    list_repository:
+     - deb [arch=amd64 signed-by={{ path_to_key }}{{ name_of_key }}] http://repo.yandex.ru/yandex-browser/deb stable main
+     - deb [arch=amd64 signed-by={{ path_to_key }}{{ name_of_key }}] http://repo.yandex.ru/yandex-browser/deb beta main
+    path_to_key: '/etc/apt/trusted.gpg.d/'
+    name_of_key: 'yandex.gpg.gpg'
+
+  vars_prompt:
+    - name: name_of_user
+      prompt: "Enter the user name with root privelege \n"
+      private: no
+      default: root
+
+  tasks:
+
+#    - name: Add GPG key for Yandex repository
+#      get_url:
+#        url:  https://repo.yandex.ru/yandex-browser/YANDEX-BROWSER-KEY.GPG
+#        dest: "{{ path_to_key }}{{ name_of_key }}"
+#        mode: u+rw,g+r,o+r
+#      become: yes
+
+    - name: Add GPG key for Yandex repository
+      ansible.builtin.apt_key:
+        url: https://repo.yandex.ru/yandex-browser/YANDEX-BROWSER-KEY.GPG
+        keyring: "{{ path_to_key }}{{ name_of_key }}"
+        state: present
+      become: yes
+
+    - name: 'Convert gpg Yandex key in new standart  yandex.gpg -> yandex.gpg.gpg'
+      shell: gpg --dearmor /etc/apt/trusted.gpg.d/yandex.gpg
+
+
+    - name: Add Yandex repository
+      ansible.builtin.apt_repository:
+        repo: "{{ item }}"
+        state: present
+      become: yes
+      with_list: "{{ list_repository }}"
+
+    - name: Install the necessary packages
+      apt:
+        update_cache: yes
+        pkg: '{{ list_soft }}'
+        state: present
+      become: yes
+
+# make some config ....

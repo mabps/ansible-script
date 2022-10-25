@@ -1,0 +1,27 @@
+---
+- name: Ansible script for Debian 11+, that need to guest (debian) OS, like drivers for windows.
+  hosts: "{{ variable_host | default('localhost') }}"
+  become_user: '{{ name_of_user }}'
+  become_method: 'sudo'
+
+  vars:
+    list_soft:
+     - build-essential
+     - dkms
+     - linux-headers-{{ ansible_kernel }}
+
+  vars_prompt:
+    - name: name_of_user
+      prompt: "Please enter the name of user, for which we are making settings (default mabp) \n"
+      private: no
+      default: mabp
+
+  tasks:
+
+    - name: Install the necessary packages
+      apt:
+        cache_valid_time: 28800
+        update_cache: yes
+        pkg: '{{ list_soft }}'
+        state: present
+      become: yes
