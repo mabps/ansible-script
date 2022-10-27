@@ -36,7 +36,13 @@
       become: yes
 
     - name: 'Convert gpg Yandex key in new standart  yandex.gpg -> yandex.gpg.gpg'
-      shell: gpg --dearmor /etc/apt/trusted.gpg.d/yandex.gpg
+      shell: 'gpg --dearmor {{ path_to_key }}{{ name_of_key }}'
+      become: yes
+
+
+    - name: 'Replayse non function key yandex.gpg.gpg on yandex.gpg'
+      shell: 'cp {{ path_to_key }}{{ name_of_key }}.gpg {{ path_to_key }}{{ name_of_key }}'
+      become: yes
 
 
     - name: Add Yandex repository
@@ -54,3 +60,4 @@
       become: yes
 
 # make some config ....
+#   - name: Add shotcut on pannel (if distr - xfce) + add new icon Yandex
