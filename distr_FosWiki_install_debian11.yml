@@ -1,27 +1,76 @@
 ---
-- name: Ansible script for Debian 11+, that need to guest (debian) OS, like drivers for windows.
+- name: Ansible script for Debian 11+, Install and configrure FosWiki (fom git, on separate disk).
   hosts: "{{ variable_host | default('localhost') }}"
   become_user: '{{ name_of_user }}'
   become_method: 'sudo'
 
   vars:
+# Main configure vars
+    path_to_foswiki_engine: '/foswiki-engine'
+    path_to_foswiki_database: '/foswiki-database'
+    disk_for_foswiki: '/dev/sdb'
+    type_of_filesystem_foswiki_disk: 'ext4'
+    moutpoint_foswiki_disk: '/foswiki-disk'
+# tech vars
     list_soft:
-     - build-essential
-     - dkms
-     - linux-headers-{{ ansible_kernel }}
+      - apache2
+      - git-all
+      - parted
+    list_collections_ansible_galaxy:
+      - community.general
+      - ansible.posix
+
+
 
   vars_prompt:
     - name: name_of_user
-      prompt: "Please enter the name of user, for which we are making settings (default mabp) \n"
+      prompt: "Please enter the name of user, for which we are making settings (default root) \n"
       private: no
-      default: mabp
+      default: root
 
   tasks:
-
-    - name: Install the necessary packages
+    - name: install Appache and other soft
       apt:
-        cache_valid_time: 28800
         update_cache: yes
         pkg: '{{ list_soft }}'
         state: present
       become: yes
+
+    - name: Install ansible-galaxy collection for work with parted
+      ansible.builtin.shell:
+        cmd: 'ansible-galaxy collection install {{ item }}'
+      with_items: '{{ list_collections_ansible_galaxy }}'
+
+    - name: Create new partition on Second drive for FosWiki data
+      community.general.parted:
+        device: '{{ disk_for_foswiki }}'
+        number: 1
+        fs_type: '{{type_of_filesystem_foswiki_disk}}'
+        state: present
+      become: yes
+
+    - name: 'Create directory for FosWiki mount point - {{moutpoint_foswiki_disk}}'
+      ansible.builtin.file:
+        path: '{{moutpoint_foswiki_disk}}'
+        owner: '{{name_of_user}}'
+        group: '{{name_of_user}}'
+        mode: u+rwx,g+rwx,o+rwx
+        state: directory
+      become: yes
+
+    - name: 'Mount FosWiki Drive to {{moutpoint_foswiki_disk}}'
+      ansible.posix.mount:
+        fstype: '{{type_of_filesystem_foswiki_disk}}'
+        src: '{{ disk_for_foswiki }}'
+        path: '{{moutpoint_foswiki_disk}}'
+        state: mounted
+
+    - name: Prepare folder on Second drive to put FosWiki Engine
+    - name: Prepare folder on Second drive to put FosWiki Database
+
+
+
+    - name: Download FosWiki engine from git
+    - name: Make config for Apache - to run FosWiki site
+    - name: Make config for Apache - to allow https connection
+
