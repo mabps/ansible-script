@@ -16,6 +16,7 @@
       - apache2
       - git-all
       - parted
+      - perl
     list_collections_ansible_galaxy:
       - community.general
       - ansible.posix
@@ -36,7 +37,7 @@
         state: present
       become: yes
 
-    - name: Install ansible-galaxy collection for work with parted
+    - name: Install ansible-galaxy collections, for work with parted
       ansible.builtin.shell:
         cmd: 'ansible-galaxy collection install {{ item }}'
       with_items: '{{ list_collections_ansible_galaxy }}'
@@ -46,6 +47,14 @@
         device: '{{ disk_for_foswiki }}'
         number: 1
         fs_type: '{{type_of_filesystem_foswiki_disk}}'
+        state: present
+      become: yes
+
+    - name: Format partition Second drive for FosWiki data
+      community.general.filesystem:
+        fstype: '{{type_of_filesystem_foswiki_disk}}'
+        dev: '{{ disk_for_foswiki }}1'
+        force: no  # if filesystem always exst on sdb1- do nothing
         state: present
       become: yes
 
@@ -61,16 +70,46 @@
     - name: 'Mount FosWiki Drive to {{moutpoint_foswiki_disk}}'
       ansible.posix.mount:
         fstype: '{{type_of_filesystem_foswiki_disk}}'
-        src: '{{ disk_for_foswiki }}'
+        src: '{{ disk_for_foswiki }}1'
         path: '{{moutpoint_foswiki_disk}}'
         state: mounted
 
     - name: Prepare folder on Second drive to put FosWiki Engine
+      ansible.builtin.file:
+        path: '{{moutpoint_foswiki_disk}}{{path_to_foswiki_engine}}'
+        owner: '{{name_of_user}}'
+        group: '{{name_of_user}}'
+        mode: u+rwx,g+rwx,o+rwx
+        state: directory
+      become: yes
+
     - name: Prepare folder on Second drive to put FosWiki Database
-
-
+      ansible.builtin.file:
+        path: '{{moutpoint_foswiki_disk}}{{path_to_foswiki_database}}'
+        owner: '{{name_of_user}}'
+        group: '{{name_of_user}}'
+        mode: u+rwx,g+rwx,o+rwx
+        state: directory
+      become: yes
 
     - name: Download FosWiki engine from git
-    - name: Make config for Apache - to run FosWiki site
-    - name: Make config for Apache - to allow https connection
+      ansible.builtin.git:
+        repo: 'https://github.com/foswiki/distro.git'
+        dest: '{{moutpoint_foswiki_disk}}{{path_to_foswiki_engine}}'
+        single_branch: yes
+        version: master
+
+    - name: Config access right on file FosWiki Engine - give acces for apache user
+      ansible.builtin.file:
+        path: '{{moutpoint_foswiki_disk}}{{path_to_foswiki_engine}}'
+        owner: 'apache'
+        group: 'apache'
+        mode: u+rwx,g+rx,o+rx
+        recurse: yes
+        state: directory
+      become: yes
+
+
+#    - name: Make config for Apache - to run FosWiki site
+#    - name: Make config for Apache - to allow https connection
 
