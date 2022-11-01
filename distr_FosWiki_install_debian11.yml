@@ -8,7 +8,7 @@
 # Main configure vars
     path_to_foswiki_engine: '/foswiki-engine'
     path_to_foswiki_database: '/foswiki-database'
-    path_to_foswiki_webserver_config_file: '/etc/apache2/sites_enabled/foswiki.httpd.conf'
+    path_to_foswiki_webserver_config_file: '/etc/apache2/sites-enabled/foswiki.httpd.conf'
     disk_for_foswiki: '/dev/sdb'
     type_of_filesystem_foswiki_disk: 'ext4'
     moutpoint_foswiki_disk: '/foswiki-disk'
@@ -32,19 +32,19 @@
       default: root
 
   tasks:
-    - name: install Appache and other soft
+    - name: 'install Appache and other soft'
       apt:
         update_cache: yes
         pkg: '{{ list_soft }}'
         state: present
       become: yes
 
-    - name: Install ansible-galaxy collections, for work with parted
+    - name: 'Install ansible-galaxy collections, for work with parted'
       ansible.builtin.shell:
         cmd: 'ansible-galaxy collection install {{ item }}'
       with_items: '{{ list_collections_ansible_galaxy }}'
 
-    - name: Create new partition on Second drive for FosWiki data
+    - name: 'Create new partition on Second drive for FosWiki data'
       community.general.parted:
         device: '{{ disk_for_foswiki }}'
         number: 1
@@ -52,7 +52,7 @@
         state: present
       become: yes
 
-    - name: Format partition Second drive for FosWiki data
+    - name: 'Format partition Second drive for FosWiki data'
       community.general.filesystem:
         fstype: '{{type_of_filesystem_foswiki_disk}}'
         dev: '{{ disk_for_foswiki }}1'
@@ -76,7 +76,7 @@
         path: '{{moutpoint_foswiki_disk}}'
         state: mounted
 
-    - name: Prepare folder on Second drive to put FosWiki Engine
+    - name: 'Prepare folder on Second drive to put FosWiki Engine'
       ansible.builtin.file:
         path: '{{moutpoint_foswiki_disk}}{{path_to_foswiki_engine}}'
         owner: '{{name_of_user}}'
@@ -85,7 +85,7 @@
         state: directory
       become: yes
 
-    - name: Prepare folder on Second drive to put FosWiki Database
+    - name: 'Prepare folder on Second drive to put FosWiki Database'
       ansible.builtin.file:
         path: '{{moutpoint_foswiki_disk}}{{path_to_foswiki_database}}'
         owner: '{{name_of_user}}'
@@ -94,7 +94,7 @@
         state: directory
       become: yes
 
-    - name: Download FosWiki engine from git
+    - name: 'Download FosWiki engine from git'
       ansible.builtin.git:
         repo: 'https://github.com/foswiki/distro.git'
         dest: '{{moutpoint_foswiki_disk}}{{path_to_foswiki_engine}}'
@@ -102,10 +102,11 @@
         version: master
         force: yes
 
-    - name: make install - by manual \"perl -T pseudo-install.pl default\"  ???
+    - name: 'install plugin - by FosWiki manual'
       ansible.builtin.shell:
         chdir: '{{moutpoint_foswiki_disk}}{{path_to_foswiki_engine}}/core'
         cmd: 'perl -T pseudo-install.pl default'
+      ignore_errors: yes  #Default intallation plugin - always have some Error, ignore this
 
     - name: 'Config access right on file FosWiki Engine - give acces for {{user_name_webserver}} user'
       ansible.builtin.file:
@@ -130,7 +131,7 @@
 
             # Configuration generated for Foswiki 2.x,  Apache 2.4
 
-            Define foswikiroot "{{moutpoint_foswiki_disk}}{{path_to_foswiki_engine}}"
+            Define foswikiroot "{{moutpoint_foswiki_disk}}{{path_to_foswiki_engine}}/core"
 
             # The Alias defines a url that points to the root of the Foswiki installation.
             # The first parameter will be part of the URL to your installation e.g.
@@ -301,7 +302,8 @@
             BrowserMatchNoCase ^$ blockAccess
 
 
-
+#    - name: 'Restart Apache 2 service - to applay config file'
+#    - name: 'Move ../data folder to - {{disk_for_foswiki}}{{path_to_foswiki_database}} '
 
 
 
