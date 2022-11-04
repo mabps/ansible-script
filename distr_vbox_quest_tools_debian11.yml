@@ -1,7 +1,7 @@
 ---
 - name: Ansible script for Debian 11+, that need to guest (debian) OS, like drivers for windows.
   hosts: "{{ variable_host | default('localhost') }}"
-#  become_user: '{{ name_of_user }}'
+  become_user: '{{ name_of_user }}'
   become_method: 'sudo'
 
   vars:
@@ -16,11 +16,11 @@
      - deb http://fasttrack.debian.net/debian-fasttrack/ bullseye-fasttrack main contrib
      - deb http://fasttrack.debian.net/debian-fasttrack/ bullseye-backports-staging main contrib
 
-#  vars_prompt:
-#    - name: name_of_user
-#      prompt: "Please enter the name of user, for which we are making settings (default mabp) \n"
-#      private: no
-#      default: mabp
+  vars_prompt:
+    - name: name_of_user
+      prompt: "Please enter the name of user, for which we are making settings (default root) \n"
+      private: no
+      default: root
 
   tasks:
     - name: Remove CD-Rom Repository

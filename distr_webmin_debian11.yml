@@ -1,0 +1,56 @@
+---
+- name: |
+    Ansible script for Debian 11+, install and Configure WebMin admin tool.
+    It's web admin tool - to help admin your server, default Login\Passw = log and pass current user, entry point =  http://localhost:10000
+  hosts: "{{ variable_host | default('localhost') }}"
+  become_user: '{{ name_of_user }}'
+  become_method: 'sudo'
+
+  vars:
+    list_soft:
+      - perl
+      - libnet-ssleay-perl
+      - openssl
+      - libauthen-pam-perl
+      - libpam-runtime
+      - libio-pty-perl
+      - webmin
+
+    list_repository:
+      - deb https://download.webmin.com/download/repository sarge contrib
+
+  vars_prompt:
+    - name: name_of_user
+      prompt: "Please enter the name of user, for which we are making settings (default root) \n"
+      private: no
+      default: root
+
+  tasks:
+    - name: Add an Apt signing key, uses whichever key is at the URL
+      ansible.builtin.apt_key:
+        url: http://www.webmin.com/jcameron-key.asc
+        state: present
+      become: yes
+
+    - name: Add additional repository to APT
+      ansible.builtin.apt_repository:
+        repo: "{{ item }}"
+        state: present
+      become: yes
+      with_list: "{{ list_repository }}"
+
+    - name: Install the necessary packages
+      ansible.builtin.apt:
+        update_cache: yes
+        pkg: '{{ list_soft }}'
+        state: present
+      become: yes
+
+
+
+
+
+
+
+
+
