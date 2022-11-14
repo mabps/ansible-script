@@ -6,23 +6,67 @@
 
   vars:
 # Main configure vars
+    web_server_name: 'apache2'
+    user_name_webserver: 'www-data'
     path_to_foswiki_engine: '/foswiki-engine'
     path_to_foswiki_database: '/foswiki-database'
-    path_to_foswiki_webserver_config_file: '/etc/apache2/sites-enabled/foswiki.httpd.conf'
+    path_to_foswiki_webserver_config_file: '/etc/apache2/sites-available/foswiki.httpd.conf'
     disk_for_foswiki: '/dev/sdb'
     type_of_filesystem_foswiki_disk: 'ext4'
     moutpoint_foswiki_disk: '/foswiki-disk'
 
 # tech vars
     list_soft:
-      - apache2
+      - '{{web_server_name}}'
       - git-all
       - parted
       - perl
+      - libcgi-session-perl
+      - libcrypt-passwdmd5-perl
+      - libfile-copy-recursive-perl
+      - libapache2-mod-perl2
+      - libapache2-request-perl
+      - libdbi-perl
+      - libdbd-mysql-perl
+      - libdbd-pg-perl
+      - libdbd-sqlite3-perl
+      - libfcgi-perl
+      - libfcgi-procmanager-perl
+      - libcrypt-smime-perl
+      - libcrypt-x509-perl
+      - libconvert-pem-perl
+      - libalgorithm-diff-perl
+      - libarchive-tar-perl
+      - libauthen-sasl-perl
+      - libcgi-pm-perl
+      - libdigest-sha-perl
+      - libemail-address-xs-perl
+      - libemail-mime-perl
+      - libencode-perl
+      - liberror-perl
+      - libhtml-parser-perl
+      - libhtml-tree-perl
+      - libio-socket-ip-perl
+      - libio-socket-ssl-perl
+      - libjson-perl
+      - liblocale-codes-perl
+      - liblocale-maketext-perl
+      - liblocale-maketext-lexicon-perl
+      - liblocale-msgfmt-perl
+      - libwww-perl
+      - liblwp-protocol-https-perl
+      - liburi-perl
+      - libversion-perl
+
+    list_apache_module:
+      - mod_rewrite
+      - cgi
+      - access_compat
+
     list_collections_ansible_galaxy:
       - community.general
       - ansible.posix
-    user_name_webserver: 'www-data'
+
 
 
   vars_prompt:
@@ -32,7 +76,7 @@
       default: root
 
   tasks:
-    - name: 'install Appache and other soft'
+    - name: 'install web server and other soft'
       apt:
         update_cache: yes
         pkg: '{{ list_soft }}'
@@ -56,7 +100,7 @@
       community.general.filesystem:
         fstype: '{{type_of_filesystem_foswiki_disk}}'
         dev: '{{ disk_for_foswiki }}1'
-        force: no  # if filesystem always exst on sdb1- do nothing
+        force: no  # if filesystem always exst on sdb1 - do nothing
         state: present
       become: yes
 
@@ -113,7 +157,7 @@
         path: '{{moutpoint_foswiki_disk}}{{path_to_foswiki_engine}}'
         owner: '{{user_name_webserver}}'
         group: '{{user_name_webserver}}'
-        mode: u+rwx,g+rx,o+rx
+#        mode: u+rwx,g+rx,o+rx
         recurse: yes
         state: directory
       become: yes
@@ -301,12 +345,24 @@
 
             BrowserMatchNoCase ^$ blockAccess
 
+    - name: 'Activate FosWiki config for apache'
+      ansible.builtin.shell:
+        cmd: 'a2ensite {{path_to_foswiki_webserver_config_file}}'
 
-#    - name: 'Restart Apache 2 service - to applay config file'
-#    - name: 'Move ../data folder to - {{disk_for_foswiki}}{{path_to_foswiki_database}} '
+    - name: 'Apache - enable some mods'
+      community.general.apache2_module:
+        state: present
+        name: {{list_apache_module}}
 
 
+    - name: 'Restart Apache 2 service - to applay config file'
+      ansible.builtin.service:
+        name: '{{web_server_name}}'
+        state: restarted
 
+#    - name: 'Make HardLink to  ../data folder - {{disk_for_foswiki}}{{path_to_foswiki_database}}, for esealy acess to data file '
+
+#    - name: Make config Apache - block any acess to another directory (/usr/share, /var/www e.t.c.)
 #    - name: Make config for Apache - to allow https connection
 
 #    - name: Make SSL Sertification
