@@ -1,0 +1,97 @@
+- name: Ansible playbook - setup and cofigure Conky
+  hosts: "{{ variable_host | default('localhost') }}"
+  become: yes
+#  become_user: '{{ name_of_user }}'
+  become_method: 'sudo'
+
+  vars:
+   home_directory_of_user: "/home/{{ name_of_user }}"
+   conky_configuration_file: "/etc/conky/conky.conf"
+   list_soft: 
+     - conky            #need additional configure - see next step in playbook
+
+  vars_prompt:
+    - name: name_of_user
+      prompt: "Please enter the name of user, for which we are making settings \n (default - 'root'):"
+      private: no
+      default: root     
+
+  tasks:
+##################### Debug #######################
+
+    - name: get the username  - that try to config remote maschine
+      become: true
+      shell:
+        cmd: 'command whoami'
+      register: username_on_the_host
+
+    - debug: var=username_on_the_host
+
+##################### Install some packages #######################  
+    - name: Install the necessary packages
+      apt:
+        cache_valid_time: 28800
+        update_cache: yes
+        pkg: '{{ list_soft }}'
+        state: present
+      become: yes
+
+##################### Edit Conky configuration file #######################
+
+    - name: Creating default configurations for Conky (WARNING!!! - if you have any Conky configuration file, it will be replaced with the default configuration)
+      ansible.builtin.shell:
+        cmd: 'conky --print-config > {{ conky_configuration_file }}'
+      become: yes
+
+    - name: Modify Conky config file - Step 01      # code like \x24 - its ASCII hex code = $, no anothe way to put need symbol
+      ansible.builtin.replace:
+        path: '{{ conky_configuration_file }}'
+        backup: yes 
+        regexp: "{{ item.var }}"
+        replace: "{{ item.value }}"
+      loop:
+        - {var: "^    alignment = 'top_left',", value: "    alignment = 'top_right'," }
+        - {var: "^    background = false,",     value: "    background = true," }
+        - {var: "^    own_window = true,",      value: "    own_window = false," }
+        - {var: "(.+)Info(.+)",    value: "\x24\x7bcolor white\x7dComputerName - \x24\x7bcolor red\x7d\x24\x7bnodename\x7d\x3A\x24color \n\x24\x7bkernel\x7d on \x24\x7bmachine\x7d" } 
+      become: yes
+        
+    - name: Modify Conky config file - Step 02, add information about IP 
+      ansible.builtin.lineinfile:
+        path: '{{ conky_configuration_file }}'
+        line: "\x24\x7bcolor red\x7dYou IP - ${addr {{ item }}}\x3A\x24color"
+        insertafter: \$\{kernel\} on \$\{machine\}\n
+      when: not("{{ item }}" == "lo")
+      loop: '{{ ansible_facts.interfaces }}'
+      become: yes
+      
+    - name: Make Autostart for Conky - Step 03, make autostart
+      ansible.builtin.lineinfile:
+        path: '{{ home_directory_of_user }}/.config/autostart/conky.desktop'
+        line: |
+          [Desktop Entry]
+          Categories=System;Monitor;
+          Comment[en_US]= SystemMonitor
+          Comment=
+          Exec=conky --daemonize --pause=1
+          GenericName[en_US]=
+          GenericName=
+          Icon=utilities-system-monitor
+          MimeType=
+          Name[en_US]=conky
+          Name=conky
+          Path=
+          StartupNotify=false
+          Terminal=false
+          TerminalOptions=
+          Type=Application
+          X-DBUS-ServiceName=
+          X-DBUS-StartupType=
+          X-KDE-SubstituteUID=false
+          X-KDE-Username= 
+        create: yes
+        owner: '{{ name_of_user }}'
+        group: '{{ name_of_user }}'
+        mode: u=rwx,g=rx,o=rx
+
+#    - name: Create a destop icon for runing Conky.
