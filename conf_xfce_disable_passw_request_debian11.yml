@@ -15,8 +15,8 @@
     - name: "Add setting - no ask the password when use sudo command"
       ansible.builtin.lineinfile:
         path: /etc/sudoers
-        insertafter: EOF
-        line: "{{ name_of_user }} ALL=(ALL) NOPASSWD: ALL"
+        insertafter: "^%sudo	ALL=(ALL:ALL) ALL"
+        line: "{{ name_of_user }} ALL=(ALL) NOPASSWD: ALL \n"
         backup: true
 
     - name: "Add setting - turn on autologin {{ name_of_user }} on botting XFCE"
@@ -28,6 +28,10 @@
     
     - name: "Turn off Lock screen when display turn off by timer, for XFCE"
       block:
+        - name: Creates directory local setting XFCE at user {{ name_of_user }} to 
+          file:
+            path: /home/{{ name_of_user }}/.config/autostart
+            state: directory
         - name: "Copy file from basic setting to setting for user = {{ name_of_user }} "
           ansible.builtin.copy:
             remote_src: yes
