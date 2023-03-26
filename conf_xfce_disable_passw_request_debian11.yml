@@ -17,12 +17,12 @@
         path: /etc/sudoers
         insertafter: EOF
         line: "{{ name_of_user }} ALL=(ALL) NOPASSWD: ALL"
-      backup: true
+        backup: true
 
     - name: Add setting - turn on autologin {{ name_of_user }} on botting XFCE
       ansible.builtin.replace:
         path: /etc/lightdm/lightdm.conf
         regexp: "^# autologin-user = User to log in with by default(.+)$"
         line: "^ autologin-user = {{ name_of_user }} # User to log in with by default \n"
-      backup: true  
+        backup: true  
       
