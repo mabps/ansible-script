@@ -1,0 +1,28 @@
+- name: Config XFCE on Debian11 - does not ask are password when it's booting ore screen off.
+  hosts: "{{ variable_host | default('localhost') }}"
+  become: yes
+  become_method: 'sudo'
+
+  vars:
+   
+  vars_prompt:
+    - name: name_of_user
+      prompt: "Please enter the name of user, for which we are making settings \n (default - 'root'):"
+      private: no
+      default: root     
+
+  tasks:
+    - name: Add setting - no ask the password when use sudo command
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers
+        insertafter: EOF
+        line: "{{ name_of_user }} ALL=(ALL) NOPASSWD: ALL"
+      backup: true
+
+    - name: Add setting - turn on autologin {{ name_of_user }} on botting XFCE
+      ansible.builtin.replace:
+        path: /etc/lightdm/lightdm.conf
+        regexp: "^# autologin-user = User to log in with by default(.+)$"
+        line: "^ autologin-user = {{ name_of_user }} # User to log in with by default \n"
+      backup: true  
+      
