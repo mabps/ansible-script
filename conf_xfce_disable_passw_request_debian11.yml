@@ -12,17 +12,32 @@
       default: root     
 
   tasks:
-    - name: Add setting - no ask the password when use sudo command
+    - name: "Add setting - no ask the password when use sudo command"
       ansible.builtin.lineinfile:
         path: /etc/sudoers
         insertafter: EOF
         line: "{{ name_of_user }} ALL=(ALL) NOPASSWD: ALL"
         backup: true
 
-    - name: Add setting - turn on autologin {{ name_of_user }} on botting XFCE
+    - name: "Add setting - turn on autologin {{ name_of_user }} on botting XFCE"
       ansible.builtin.replace:
-        path: /etc/lightdm/lightdm.conf
-        regexp: "^# autologin-user = User to log in with by default(.+)$"
-        line: "^ autologin-user = {{ name_of_user }} # User to log in with by default \n"
+        path: "/etc/lightdm/lightdm.conf"
+        regexp: "^#autologin-user=$"
+        replace: "autologin-user = {{ name_of_user }} # config autologin be ansible \n"
         backup: true  
+    
+    - name: "Turn off Lock screen when display turn off by timer, for XFCE"
+      block:
+        - name: "Copy file from basic setting to setting for user = {{ name_of_user }} "
+          ansible.builtin.copy:
+            remote_src: yes
+            src: "/etc/xdg/autostart/light-locker.desktop"
+            dest: "/home/{{ name_of_user }}/.config/autostart/light-locker.desktop"
+        - name: "Add setting to file - for no Lock screen"
+          ansible.builtin.lineinfile:
+            path: "/home/{{ name_of_user }}/.config/autostart/light-locker.desktop"
+            insertafter: EOF
+            line: "Hidden=true"
+               
+                
       
