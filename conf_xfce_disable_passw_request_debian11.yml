@@ -15,7 +15,8 @@
     - name: "Add setting - no ask the password when use sudo command"
       ansible.builtin.lineinfile:
         path: /etc/sudoers
-        insertafter: "^%sudo	ALL=(ALL:ALL) ALL"
+#        insertafter: "^%sudo	ALL=(ALL:ALL) ALL"
+        insertafter: EOF
         line: "{{ name_of_user }} ALL=(ALL) NOPASSWD: ALL \n"
         backup: true
 
