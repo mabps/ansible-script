@@ -60,6 +60,7 @@
 
     list_apache_module:
       - mod_rewrite
+      - rewrite
       - cgi
       - access_compat
 
