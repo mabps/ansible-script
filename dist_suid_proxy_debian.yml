@@ -1,0 +1,42 @@
+# Install SQUID proxy WEB server on Debian
+# # Next feature for relase
+# 1. 
+# 2. 
+
+
+---
+- name: Install and cofigure SQUID WEB proxy server.
+  become: yes
+  become_method: 'sudo'
+
+
+  vars:
+# Main configure vars
+    path_to_squid_config_file: '/etc/squid/squid.conf'
+    
+
+# tech vars
+    list_soft:
+      - squid 
+      
+  tasks:
+    - name: 'Install SQUID and other soft'
+      ansible.builtin.package:
+        name: '{{ list_soft}}'
+        state: present
+    
+    - name: 'Edit SQUID config file'
+      ansible.builtin.lineinfile:
+        dest: {{ path_to_squid_config_file }}
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        backup: yes
+      become: yes
+      loop:
+        - { regexp: '^#http_access allow localnet', line: 'http_access allow localnet' }
+
+    - name: Ensure the default Apache port is 8080
+      ansible.builtin.lineinfile:
+        path: {{ path_to_squid_config_file }}
+        insertafter: EOF
+        line: 'cache deny all'
